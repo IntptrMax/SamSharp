@@ -8,7 +8,7 @@ namespace SamSharp.Modeling
 	internal class Sam : Module<List<BatchedInput>, bool, List<BatchedOutput>>
 	{
 		private readonly float mask_threshold = 0.0f;
-		private readonly string image_format = "RGB";
+		//private readonly string image_format = "RGB";
 
 		public readonly ImageEncoderViT image_encoder;
 		public readonly PromptEncoder prompt_encoder;
@@ -34,51 +34,12 @@ namespace SamSharp.Modeling
 			RegisterComponents();
 		}
 
-		///// <summary>
-		///// Predicts masks end-to-end from provided images and prompts. If prompts are not known in advance, using SamPredictor is recommended over calling the model directly.
-		///// </summary>
-		///// <param name="batched_input">A list over input images, each a dictionary with the following keys.A prompt key can be	excluded if it is not present.<br/> 
-		///// 'image': The image as a torch tensor in 3xHxW format, already transformed for input to the model.<br/> 
-		///// 'original_size': (tuple(int, int)) The original size of the image before transformation, as (H, W).<br/> 
-		///// 'point_coords': (torch.Tensor) Batched point prompts for this image, with shape BxNx2.Already transformed to the input frame of the model.<br/> 
-		///// 'point_labels': (torch.Tensor) Batched labels for point prompts, with shape BxN.<br/> 
-		///// 'boxes': (torch.Tensor) Batched box inputs, with shape Bx4. Already transformed to the input frame of the model.<br/> 
-		///// 'mask_inputs': (torch.Tensor) Batched mask inputs to the model, in the form Bx1xHxW.</param>
-		///// <param name="multimask_output">Whether the model should predict multiple disambiguating masks, or return a single mask.</param>
-		///// <returns>A list over input images, where each element is as dictionary with the following keys.<br/>
-		///// 'masks': (torch.Tensor) Batched binary mask predictions, with shape BxCxHxW, where B is the number of input prompts, C is determined by multimask_output, and(H, W) is the original size of the image.<br/>
-		///// 'iou_predictions': (torch.Tensor) The model's predictions of mask quality, in shape BxC.<br/>
-		///// 'low_res_logits': (torch.Tensor) Low resolution logits with shape BxCxHxW, where H = W = 256.Can be passed as mask input to subsequent iterations of prediction.</returns>
-		//public override List<Dictionary<string, Tensor>> forward(List<Dictionary<string, object>> batched_input, bool multimask_output)
-		//{
-		//	List<Tensor> preprocessedImages = batched_input.Select(X => this.preprocess((Tensor)X["image"])).ToList();
-		//	Tensor input_images = torch.stack(preprocessedImages, dim: 0);
-		//	Tensor image_embeddings = this.image_encoder.forward(input_images);
-
-		//	List<Dictionary<string, Tensor>> outputs = new List<Dictionary<string, Tensor>>();
-		//	for (int i = 0; i < batched_input.Count; i++)
-		//	{
-		//		Dictionary<string, object> image_record = batched_input[i];
-		//		Tensor curr_embedding = image_embeddings[i];
-		//		(Tensor, Tensor) points = image_record.Keys.Contains("point_coords") ? ((Tensor)image_record["point_coords"], (Tensor)image_record["point_labels"]) : (torch.zeros(0), torch.zeros(0));
-		//		(Tensor sparse_embeddings, Tensor dense_embeddings) = this.prompt_encoder.forward(points: points, boxes: (Tensor)image_record.GetValueOrDefault("boxes")!, masks: (Tensor)image_record.GetValueOrDefault("mask_inputs")!);
-		//		(Tensor low_res_masks, Tensor iou_predictions) = this.mask_decoder.forward(image_embeddings = curr_embedding.unsqueeze(0), image_pe: this.prompt_encoder.get_dense_pe(), sparse_prompt_embeddings: sparse_embeddings, dense_prompt_embeddings: dense_embeddings, multimask_output: multimask_output);
-		//		Tensor masks = this.postprocess_masks(low_res_masks, input_size: ((Tensor)image_record["image"]).shape[-2..], original_size: (long[])image_record["original_size"]);
-		//		masks = masks > this.mask_threshold;
-
-		//		outputs.Append(new Dictionary<string, Tensor>
-		//		{
-		//			{ "masks", masks},
-		//			{ "iou_predictions", iou_predictions},
-		//			{ "low_res_logits", low_res_masks}
-		//		});
-		//	}
-		//	return outputs;
-		//}
-
-
-		
-
+		/// <summary>
+		/// Predicts masks end-to-end from provided images and prompts. If prompts are not known in advance, using SamPredictor is recommended over calling the model directly.
+		/// </summary>
+		/// <param name="batched_input">Batched inputs for SAM</param>
+		/// <param name="multimask_output">Whether the model should predict multiple disambiguating masks, or return a single mask.</param>
+		/// <returns></returns>
 		public override List<BatchedOutput> forward(List<BatchedInput> batched_input, bool multimask_output)
 		{
 			using var _ = NewDisposeScope();
@@ -91,7 +52,7 @@ namespace SamSharp.Modeling
 			{
 				BatchedInput image_record = batched_input[i];
 				Tensor curr_embedding = image_embeddings[i];
-				(Tensor, Tensor) points = image_record.Point_coords is not null ? (image_record.Point_coords, image_record.Point_labels) : (torch.zeros(0), torch.zeros(0));
+				(Tensor, Tensor)? points = image_record.Point_coords is not null ? (image_record.Point_coords, image_record.Point_labels) : null;
 				(Tensor sparse_embeddings, Tensor dense_embeddings) = this.prompt_encoder.forward(points: points, boxes: image_record.Boxes, masks: image_record.Mask_inputs);
 				(Tensor low_res_masks, Tensor iou_predictions) = this.mask_decoder.forward(image_embeddings = curr_embedding.unsqueeze(0), image_pe: this.prompt_encoder.get_dense_pe(), sparse_prompt_embeddings: sparse_embeddings, dense_prompt_embeddings: dense_embeddings, multimask_output: multimask_output);
 				Tensor masks = this.postprocess_masks(low_res_masks, input_size: new long[] { image_record.Image.shape[2], image_record.Image.shape[3] }, original_size: image_record.Original_size);

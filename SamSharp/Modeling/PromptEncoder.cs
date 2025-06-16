@@ -168,6 +168,10 @@ namespace SamSharp.Modeling
 			if (boxes is not null)
 			{
 				Tensor box_embeddings = this._embed_boxes(boxes);
+				if (sparse_embeddings.shape[0] == 1)
+				{
+					sparse_embeddings = sparse_embeddings.repeat(box_embeddings.shape[0], 1, 1);
+				}
 				sparse_embeddings = torch.cat(new Tensor[] { sparse_embeddings, box_embeddings }, dim: 1);
 			}
 

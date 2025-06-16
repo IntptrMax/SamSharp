@@ -99,10 +99,10 @@ namespace SamSharp.Modeling
 			private readonly bool skip_first_layer_pe;
 
 			/// <summary>
-			/// A Transformer block with four layers: 
-			/// (1) self-attention of sparse inputs, 
-			/// (2) cross attention of sparse inputs to dense inputs, 
-			/// (3) mlp block on sparse inputs, and
+			/// A Transformer block with four layers: <br/>
+			/// (1) self-attention of sparse inputs, <br/>
+			/// (2) cross attention of sparse inputs to dense inputs, <br/>
+			/// (3) mlp block on sparse inputs, and<br/>
 			/// (4) cross attention of dense inputs to sparse inputs.
 			/// </summary>
 			/// <param name="embedding_dim">the channel dimension of the embeddings</param>

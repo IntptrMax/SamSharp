@@ -37,13 +37,18 @@
 			groupBox3 = new GroupBox();
 			PictureBox_Mask = new PictureBox();
 			groupBox4 = new GroupBox();
-			Button_RemoveLastPoint = new Button();
 			groupBox2 = new GroupBox();
 			ComboBox_Device = new ComboBox();
 			Button_ModelLoad = new Button();
 			groupBox5 = new GroupBox();
 			Button_ModelScan = new Button();
 			TextBox_ModelPath = new TextBox();
+			Button_RemoveLastPoint = new Button();
+			groupBox6 = new GroupBox();
+			label1 = new Label();
+			NumericUpDown_ImageSize = new NumericUpDown();
+			Button_RemoveLastBox = new Button();
+			RadioButton_Box = new RadioButton();
 			groupBox1.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)PictureBox_Image).BeginInit();
 			groupBox3.SuspendLayout();
@@ -51,6 +56,8 @@
 			groupBox4.SuspendLayout();
 			groupBox2.SuspendLayout();
 			groupBox5.SuspendLayout();
+			groupBox6.SuspendLayout();
+			((System.ComponentModel.ISupportInitialize)NumericUpDown_ImageSize).BeginInit();
 			SuspendLayout();
 			// 
 			// groupBox1
@@ -72,13 +79,16 @@
 			PictureBox_Image.SizeMode = PictureBoxSizeMode.Zoom;
 			PictureBox_Image.TabIndex = 0;
 			PictureBox_Image.TabStop = false;
-			PictureBox_Image.MouseClick += PictureBox_Image_MouseClick;
+			PictureBox_Image.Paint += PictureBox_Image_Paint;
+			PictureBox_Image.MouseDown += PictureBox_Image_MouseDown;
+			PictureBox_Image.MouseMove += PictureBox_Image_MouseMove;
+			PictureBox_Image.MouseUp += PictureBox_Image_MouseUp;
 			// 
 			// Button_Run
 			// 
-			Button_Run.Location = new Point(777, 22);
+			Button_Run.Location = new Point(746, 18);
 			Button_Run.Name = "Button_Run";
-			Button_Run.Size = new Size(61, 55);
+			Button_Run.Size = new Size(92, 25);
 			Button_Run.TabIndex = 3;
 			Button_Run.Text = "Run";
 			Button_Run.UseVisualStyleBackColor = true;
@@ -87,7 +97,7 @@
 			// RadioButton_Background
 			// 
 			RadioButton_Background.AutoSize = true;
-			RadioButton_Background.Location = new Point(601, 55);
+			RadioButton_Background.Location = new Point(118, 22);
 			RadioButton_Background.Name = "RadioButton_Background";
 			RadioButton_Background.Size = new Size(102, 21);
 			RadioButton_Background.TabIndex = 2;
@@ -99,7 +109,7 @@
 			// 
 			RadioButton_Foreground.AutoSize = true;
 			RadioButton_Foreground.Checked = true;
-			RadioButton_Foreground.Location = new Point(601, 26);
+			RadioButton_Foreground.Location = new Point(12, 22);
 			RadioButton_Foreground.Name = "RadioButton_Foreground";
 			RadioButton_Foreground.Size = new Size(100, 21);
 			RadioButton_Foreground.TabIndex = 1;
@@ -109,9 +119,9 @@
 			// 
 			// Button_ImageLoad
 			// 
-			Button_ImageLoad.Location = new Point(520, 26);
+			Button_ImageLoad.Location = new Point(736, 41);
 			Button_ImageLoad.Name = "Button_ImageLoad";
-			Button_ImageLoad.Size = new Size(75, 48);
+			Button_ImageLoad.Size = new Size(102, 24);
 			Button_ImageLoad.TabIndex = 0;
 			Button_ImageLoad.Text = "Load Image";
 			Button_ImageLoad.UseVisualStyleBackColor = true;
@@ -139,11 +149,7 @@
 			// 
 			// groupBox4
 			// 
-			groupBox4.Controls.Add(Button_RemoveLastPoint);
 			groupBox4.Controls.Add(groupBox2);
-			groupBox4.Controls.Add(RadioButton_Background);
-			groupBox4.Controls.Add(Button_Run);
-			groupBox4.Controls.Add(RadioButton_Foreground);
 			groupBox4.Controls.Add(Button_ModelLoad);
 			groupBox4.Controls.Add(Button_ImageLoad);
 			groupBox4.Controls.Add(groupBox5);
@@ -153,20 +159,10 @@
 			groupBox4.TabIndex = 3;
 			groupBox4.TabStop = false;
 			// 
-			// Button_RemoveLastPoint
-			// 
-			Button_RemoveLastPoint.Location = new Point(701, 24);
-			Button_RemoveLastPoint.Name = "Button_RemoveLastPoint";
-			Button_RemoveLastPoint.Size = new Size(70, 53);
-			Button_RemoveLastPoint.TabIndex = 5;
-			Button_RemoveLastPoint.Text = "Remove LastPoint";
-			Button_RemoveLastPoint.UseVisualStyleBackColor = true;
-			Button_RemoveLastPoint.Click += Button_RemoveLastPoint_Click;
-			// 
 			// groupBox2
 			// 
 			groupBox2.Controls.Add(ComboBox_Device);
-			groupBox2.Location = new Point(304, 20);
+			groupBox2.Location = new Point(462, 22);
 			groupBox2.Name = "groupBox2";
 			groupBox2.Size = new Size(122, 57);
 			groupBox2.TabIndex = 4;
@@ -185,9 +181,9 @@
 			// 
 			// Button_ModelLoad
 			// 
-			Button_ModelLoad.Location = new Point(431, 27);
+			Button_ModelLoad.Location = new Point(605, 41);
 			Button_ModelLoad.Name = "Button_ModelLoad";
-			Button_ModelLoad.Size = new Size(83, 48);
+			Button_ModelLoad.Size = new Size(102, 24);
 			Button_ModelLoad.TabIndex = 2;
 			Button_ModelLoad.Text = "Model Load";
 			Button_ModelLoad.UseVisualStyleBackColor = true;
@@ -199,14 +195,14 @@
 			groupBox5.Controls.Add(TextBox_ModelPath);
 			groupBox5.Location = new Point(6, 20);
 			groupBox5.Name = "groupBox5";
-			groupBox5.Size = new Size(292, 57);
+			groupBox5.Size = new Size(450, 57);
 			groupBox5.TabIndex = 0;
 			groupBox5.TabStop = false;
 			groupBox5.Text = "Model Path";
 			// 
 			// Button_ModelScan
 			// 
-			Button_ModelScan.Location = new Point(211, 22);
+			Button_ModelScan.Location = new Point(369, 24);
 			Button_ModelScan.Name = "Button_ModelScan";
 			Button_ModelScan.Size = new Size(75, 23);
 			Button_ModelScan.TabIndex = 1;
@@ -219,14 +215,83 @@
 			TextBox_ModelPath.Location = new Point(6, 24);
 			TextBox_ModelPath.Name = "TextBox_ModelPath";
 			TextBox_ModelPath.ReadOnly = true;
-			TextBox_ModelPath.Size = new Size(199, 23);
+			TextBox_ModelPath.Size = new Size(357, 23);
 			TextBox_ModelPath.TabIndex = 0;
+			// 
+			// Button_RemoveLastPoint
+			// 
+			Button_RemoveLastPoint.Location = new Point(280, 18);
+			Button_RemoveLastPoint.Name = "Button_RemoveLastPoint";
+			Button_RemoveLastPoint.Size = new Size(126, 25);
+			Button_RemoveLastPoint.TabIndex = 5;
+			Button_RemoveLastPoint.Text = "Remove Last Point";
+			Button_RemoveLastPoint.UseVisualStyleBackColor = true;
+			Button_RemoveLastPoint.Click += Button_RemoveLastPoint_Click;
+			// 
+			// groupBox6
+			// 
+			groupBox6.Controls.Add(label1);
+			groupBox6.Controls.Add(NumericUpDown_ImageSize);
+			groupBox6.Controls.Add(Button_RemoveLastBox);
+			groupBox6.Controls.Add(RadioButton_Box);
+			groupBox6.Controls.Add(Button_RemoveLastPoint);
+			groupBox6.Controls.Add(Button_Run);
+			groupBox6.Controls.Add(RadioButton_Foreground);
+			groupBox6.Controls.Add(RadioButton_Background);
+			groupBox6.Location = new Point(12, 539);
+			groupBox6.Name = "groupBox6";
+			groupBox6.Size = new Size(844, 53);
+			groupBox6.TabIndex = 4;
+			groupBox6.TabStop = false;
+			groupBox6.Text = "Points and boxes";
+			// 
+			// label1
+			// 
+			label1.AutoSize = true;
+			label1.Location = new Point(560, 22);
+			label1.Name = "label1";
+			label1.Size = new Size(72, 17);
+			label1.TabIndex = 8;
+			label1.Text = "Image Size";
+			// 
+			// NumericUpDown_ImageSize
+			// 
+			NumericUpDown_ImageSize.Increment = new decimal(new int[] { 64, 0, 0, 0 });
+			NumericUpDown_ImageSize.Location = new Point(638, 18);
+			NumericUpDown_ImageSize.Maximum = new decimal(new int[] { 8192, 0, 0, 0 });
+			NumericUpDown_ImageSize.Minimum = new decimal(new int[] { 128, 0, 0, 0 });
+			NumericUpDown_ImageSize.Name = "NumericUpDown_ImageSize";
+			NumericUpDown_ImageSize.Size = new Size(69, 23);
+			NumericUpDown_ImageSize.TabIndex = 2;
+			NumericUpDown_ImageSize.Value = new decimal(new int[] { 512, 0, 0, 0 });
+			// 
+			// Button_RemoveLastBox
+			// 
+			Button_RemoveLastBox.Location = new Point(412, 18);
+			Button_RemoveLastBox.Name = "Button_RemoveLastBox";
+			Button_RemoveLastBox.Size = new Size(126, 25);
+			Button_RemoveLastBox.TabIndex = 7;
+			Button_RemoveLastBox.Text = "Remove Last Box";
+			Button_RemoveLastBox.UseVisualStyleBackColor = true;
+			Button_RemoveLastBox.Click += Button_RemoveLastBox_Click;
+			// 
+			// RadioButton_Box
+			// 
+			RadioButton_Box.AutoSize = true;
+			RadioButton_Box.Location = new Point(226, 22);
+			RadioButton_Box.Name = "RadioButton_Box";
+			RadioButton_Box.Size = new Size(48, 21);
+			RadioButton_Box.TabIndex = 6;
+			RadioButton_Box.TabStop = true;
+			RadioButton_Box.Text = "Box";
+			RadioButton_Box.UseVisualStyleBackColor = true;
 			// 
 			// MainForm
 			// 
 			AutoScaleDimensions = new SizeF(7F, 17F);
 			AutoScaleMode = AutoScaleMode.Font;
-			ClientSize = new Size(866, 542);
+			ClientSize = new Size(866, 603);
+			Controls.Add(groupBox6);
 			Controls.Add(groupBox4);
 			Controls.Add(groupBox3);
 			Controls.Add(groupBox1);
@@ -238,10 +303,12 @@
 			groupBox3.ResumeLayout(false);
 			((System.ComponentModel.ISupportInitialize)PictureBox_Mask).EndInit();
 			groupBox4.ResumeLayout(false);
-			groupBox4.PerformLayout();
 			groupBox2.ResumeLayout(false);
 			groupBox5.ResumeLayout(false);
 			groupBox5.PerformLayout();
+			groupBox6.ResumeLayout(false);
+			groupBox6.PerformLayout();
+			((System.ComponentModel.ISupportInitialize)NumericUpDown_ImageSize).EndInit();
 			ResumeLayout(false);
 		}
 
@@ -263,5 +330,10 @@
 		private ComboBox ComboBox_Device;
 		private GroupBox groupBox2;
 		private Button Button_RemoveLastPoint;
+		private GroupBox groupBox6;
+		private RadioButton RadioButton_Box;
+		private Button Button_RemoveLastBox;
+		private Label label1;
+		private NumericUpDown NumericUpDown_ImageSize;
 	}
 }

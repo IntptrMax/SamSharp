@@ -1,12 +1,12 @@
 ﻿using SamSharp.Modeling;
 using SkiaSharp;
+using System.Linq;
 using TorchSharp;
 using static SamSharp.Utils.Classes;
 using static TorchSharp.torch;
 
 namespace SamSharp.Utils
 {
-
 	/// <summary>
 	///  Predict masks for the given input prompts, using the currently set image. Input prompts are batched torch tensors and are expected to already be transformed to the input frame using ResizeLongestSide.
 	/// </summary>
@@ -23,7 +23,7 @@ namespace SamSharp.Utils
 	public class SamPredictor
 	{
 		private readonly Sam model;
-		private const float maxSize = 1024;
+
 
 		public SamPredictor(string checkpointPath, SamDevice device = SamDevice.CPU)
 		{
@@ -32,7 +32,7 @@ namespace SamSharp.Utils
 			model = BuildSam.BuildSamModel(checkpointPath, d);
 		}
 
-		public (List<SKBitmap>, List<float[]>) Predict(SKBitmap image, List<SamPoint> points)
+		public List<PredictOutput> Predict(SKBitmap image, List<SamPoint> points = null, List<SamBox> boxes = null, int maxImageSize = 1024)
 		{
 			using var _ = no_grad();
 			model.eval();
@@ -40,21 +40,40 @@ namespace SamSharp.Utils
 
 			long w = imgTensor.shape[2];
 			long h = imgTensor.shape[1];
-			float scaleFactor = Math.Min(maxSize / w, maxSize / h);
+			float scaleFactor = Math.Min((float)maxImageSize / w, (float)maxImageSize / h);
 			int newW = (int)Math.Ceiling(w * scaleFactor);
 			int newH = (int)Math.Ceiling(h * scaleFactor);
 			imgTensor = torchvision.transforms.functional.resize(imgTensor, newH, newW);
 			long[] original_size = new long[] { h, w };
 
-			Tensor pointsTensor = torch.zeros(new long[] { 1, points.Count, 2 });
-			Tensor labelsTensor = torch.zeros(new long[] { 1, points.Count });
+			Tensor pointsTensor = null;
+			Tensor labelsTensor = null;
+			Tensor boxesTensor = null;
 
-			for (int i = 0; i < points.Count; i++)
+			if (points.Count > 0)
 			{
-				SamPoint point = points[i];
-				pointsTensor[0, i, 0] = point.X * scaleFactor;
-				pointsTensor[0, i, 1] = point.Y * scaleFactor;
-				labelsTensor[0, i] = point.Label ? 1 : 0;
+				pointsTensor = torch.zeros(new long[] { 1, points?.Count ?? 0, 2 });
+				labelsTensor = torch.zeros(new long[] { 1, points?.Count ?? 0 });
+				for (int i = 0; i < (points?.Count ?? 0); i++)
+				{
+					SamPoint point = points[i];
+					pointsTensor[0, i, 0] = point.X * scaleFactor;
+					pointsTensor[0, i, 1] = point.Y * scaleFactor;
+					labelsTensor[0, i] = point.Label ? 1 : 0;
+				}
+			}
+
+			if (boxes.Count > 0)
+			{
+				boxesTensor = torch.zeros(new long[] { boxes.Count, 4 });
+				for (int i = 0; i < boxes.Count!; i++)
+				{
+					SamBox box = boxes[i];
+					boxesTensor[i, 0] = box.Left * scaleFactor;   // Box Left
+					boxesTensor[i, 1] = box.Top * scaleFactor;    // Box Top
+					boxesTensor[i, 2] = box.Right * scaleFactor;  // Box Right
+					boxesTensor[i, 3] = box.Bottom * scaleFactor; // Box Bottom
+				}
 			}
 
 			BatchedInput batchedInput = new BatchedInput
@@ -62,7 +81,8 @@ namespace SamSharp.Utils
 				Image = imgTensor.unsqueeze(0),
 				Point_coords = pointsTensor,
 				Point_labels = labelsTensor,
-				Original_size = original_size
+				Original_size = original_size,
+				Boxes = boxesTensor
 			};
 			batchedInput.to(CUDA);
 
@@ -72,17 +92,26 @@ namespace SamSharp.Utils
 			};
 			model.to(CUDA);
 
-			List<BatchedOutput> outputs = model.forward(inputs, true);
-			List<SKBitmap> outputBitmaps = new List<SKBitmap>();
-			List<float[]> iou_predictions = new List<float[]>();
+			List<BatchedOutput> outputs = model.forward(inputs, false);
+
+			List<PredictOutput> predictOutputs = new List<PredictOutput>();
+
 			foreach (BatchedOutput output in outputs)
 			{
-				Tensor msk = (output.Masks.@byte() * 255).clip(0, 255).cpu();
-				SKBitmap bitmap = Tools.ImageTools.GetImageFromTensor(msk);
-				outputBitmaps.Add(bitmap);
-				iou_predictions.Add(output.Iou_predictions.data<float>().ToArray());
+				for (int i = 0; i < output.Masks.shape[0]; i++)
+				{
+					bool[,] maskArray = new bool[output.Masks.shape[3], output.Masks.shape[2]];
+					var data = output.Masks.transpose(2, 3)[i].data<bool>().ToArray();
+					Buffer.BlockCopy(data, 0, maskArray, 0, data.Length * sizeof(bool));
+
+					predictOutputs.Add(new PredictOutput
+					{
+						Mask = maskArray,
+						Precision = output.Iou_predictions[i].ToSingle(),
+					});
+				}
 			}
-			return (outputBitmaps,iou_predictions);
+			return predictOutputs;
 		}
 
 
