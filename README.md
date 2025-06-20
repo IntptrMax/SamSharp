@@ -9,6 +9,10 @@ With the help of this project you won't have to transform .pth model to onnx.
 - Support Vit-b, Vit-l and Vit-h now.
 - Support Load PreTrained models from SAM.
 - Support .Net6 or higher.
+- Support CPU and CUDA.
+- Support Float32 and Float16 data type.
+- Support Automatic Mask Generator.
+- Support Predict with points and boxes.
 
 ## Models
 
@@ -35,8 +39,6 @@ You can download the code or add it from nuget.
 In your code you can use it as below.
 
 ### Predict
-
-You can use it with the code below:
 
 ```CSharp
 string checkpointPath = @".\Assets\sam_vit_b_01ec64.pth";
@@ -93,3 +95,68 @@ using (var stream = File.OpenWrite($"mask.png"))
 And there is also a WinForm Demo.
 
 ![image](https://raw.githubusercontent.com/IntptrMax/SamSharp/refs/heads/master/Assets/Demo.jpg)
+
+### Automatic Mask Generator
+```CSharp
+string checkpointPath = @".\Assets\sam_vit_h_4b8939.pth";
+SamDevice device = SamDevice.CUDA; // or SamDevice.Cpu if you want to run on CPU
+SamScalarType dtype = SamScalarType.Float32;
+int imageSize = 512; // The maximum size of the image to process, can be adjusted based on your GPU memory
+
+SKBitmap image = SKBitmap.Decode(@"..\..\..\Assets\dog.jpg");
+
+// Use Automatic Mask Generator
+SamSharp.Utils.SamAutomaticMaskGenerator generator = new SamSharp.Utils.SamAutomaticMaskGenerator(checkpointPath, device: device, dtype: dtype);
+List<PredictOutput> outputs = generator.generate(image, maxImageSize: imageSize);
+
+Console.WriteLine("The predictions are :");
+
+using (SKCanvas canvas = new SKCanvas(image))
+{
+	canvas.Clear(SKColors.Transparent);
+	var random = new Random();
+
+	for (int i = 0; i < outputs.Count; i++)
+	{
+		PredictOutput output = outputs[i];
+		Console.WriteLine($"Mask {i}: Precision: {output.Precision * 100:F2}%");
+		bool[,] mask = output.Mask;
+
+		SKColor color = new SKColor((byte)random.Next(256), (byte)random.Next(256), (byte)random.Next(256));
+		using (var paint = new SKPaint { Color = color, BlendMode = SKBlendMode.Src })
+		{
+			int width = mask.GetLength(0);
+			int height = mask.GetLength(1);
+
+			using (var path = new SKPath())
+			{
+				for (int y = 0; y < height; y++)
+				{
+					for (int x = 0; x < width; x++)
+					{
+						if (mask[x, y])
+						{
+							path.AddRect(new SKRect(x, y, x + 1, y + 1));
+						}
+					}
+				}
+				canvas.DrawPath(path, paint);
+			}
+		}
+	}
+}
+SKData data = image.Encode(SKEncodedImageFormat.Png, 100);
+using (var stream = File.OpenWrite($"mask.png"))
+{
+	data.SaveTo(stream);
+}
+
+```
+The result mask is.
+![image](https://raw.githubusercontent.com/IntptrMax/SamSharp/refs/heads/master/Assets/dog.jpg)
+
+
+## Work to do
+- [ ] Speed up.
+- [ ] Use less VRAM.
+- [ ] Use less RAM.

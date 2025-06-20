@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PackageId>IntptrMax.SamSharp</PackageId>
-    <Version>0.1.1</Version>
+    <Version>0.1.2</Version>
     <Authors>IntptrMax</Authors>
     <Product>IntptrMax.SamSharp</Product>
     <Description>Run SAM(segment anything) in C# only.

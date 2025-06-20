@@ -96,9 +96,7 @@ namespace SamSharp_WinFormDemo
 				return;
 			}
 			int imageSize = (int)NumericUpDown_ImageSize.Value;
-
-			List<PredictOutput> outputs = predictor.Predict(image, samPoints, samBoxes,imageSize);
-
+			List<PredictOutput> outputs = predictor.Predict(image, samPoints, samBoxes, imageSize);
 			SKBitmap resultBmp = image.Copy();
 			using (SKCanvas canvas = new SKCanvas(resultBmp))
 			{
@@ -115,7 +113,7 @@ namespace SamSharp_WinFormDemo
 						Console.WriteLine($"Mask {i}: Precision: {output.Precision * 100:F2}%");
 						bool[,] mask = output.Mask;
 						Random random = new Random();
-						SKColor color = new SKColor((byte)random.Next(256), (byte)random.Next(256), (byte)random.Next(256), 128);
+						SKColor color = new SKColor((byte)random.Next(256), (byte)random.Next(256), (byte)random.Next(256), 90);
 
 						for (int y = 0; y < mask.GetLength(1); y++)
 						{
@@ -137,7 +135,8 @@ namespace SamSharp_WinFormDemo
 
 		private void MainForm_Load(object sender, EventArgs e)
 		{
-			ComboBox_Device.SelectedIndex = 0;
+			ComboBox_Device.SelectedIndex = 1;
+			ComboBox_ScaleType.SelectedIndex = 0;
 		}
 
 		private Bitmap SKBitmapToBitmap(SKBitmap skBitmap)
@@ -169,10 +168,11 @@ namespace SamSharp_WinFormDemo
 			{
 				MessageBox.Show("Please Load a model first");
 			}
-			SamDevice device = (SamDevice)ComboBox_Device.SelectedIndex; // or SamDevice.Cpu if you want to run on CPU
+			SamDevice device = (SamDevice)Enum.Parse(typeof(SamDevice), ComboBox_Device.Text);  // SamDevice.Cuda or SamDevice.
+			SamScalarType dtype = (SamScalarType)Enum.Parse(typeof(SamScalarType), ComboBox_ScaleType.Text); // Float, Half or BF16.
 			try
 			{
-				predictor = new SamSharp.Utils.SamPredictor(modelPath, device);
+				predictor = new SamSharp.Utils.SamPredictor(modelPath, device, dtype);
 				MessageBox.Show("Model Loaded Done.");
 			}
 			catch (Exception ex)
@@ -293,6 +293,11 @@ namespace SamSharp_WinFormDemo
 				samBoxes.RemoveAt(count - 1);
 				DrawPointsAndBoxes();
 			}
+		}
+
+		private void Button_Auto_Click(object sender, EventArgs e)
+		{
+
 		}
 	}
 }

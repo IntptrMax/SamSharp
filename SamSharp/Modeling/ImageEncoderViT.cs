@@ -86,6 +86,7 @@ namespace SamSharp.Modeling
 
 		public override Tensor forward(Tensor x)
 		{
+			using var _ = NewDisposeScope();
 			x = this.patch_embed.forward(x);
 			if (this.pos_embed is not null)
 			{
@@ -97,7 +98,7 @@ namespace SamSharp.Modeling
 			}
 
 			x = this.neck.forward(x.permute(new long[] { 0, 3, 1, 2 }));
-			return x;
+			return x.MoveToOuterDisposeScope();
 		}
 
 		protected override void Dispose(bool disposing)
@@ -115,7 +116,6 @@ namespace SamSharp.Modeling
 			}
 			base.Dispose(disposing);
 		}
-
 
 		/// <summary>  
 		/// Image to Patch Embedding.  
@@ -389,6 +389,7 @@ namespace SamSharp.Modeling
 		/// <returns>windows:windows after partition with [B * num_windows, window_size, window_size, C].(Hp, Wp): padded height and width before partition</returns>
 		private static (Tensor, (int, int)) window_partition(Tensor x, int window_size)
 		{
+			using var _ = NewDisposeScope();
 			int B = (int)x.shape[0];
 			int H = (int)x.shape[1];
 			int W = (int)x.shape[2];
@@ -405,7 +406,7 @@ namespace SamSharp.Modeling
 			x = x.view(B, Hp / window_size, window_size, Wp / window_size, window_size, C);
 
 			Tensor windows = x.permute(0, 1, 3, 2, 4, 5).contiguous().view(-1, window_size, window_size, C);
-			return (windows, (Hp, Wp));
+			return (windows.MoveToOuterDisposeScope(), (Hp, Wp));
 		}
 
 		/// <summary>
@@ -418,6 +419,7 @@ namespace SamSharp.Modeling
 		/// <returns>unpartitioned sequences with [B, H, W, C].</returns>
 		private static Tensor window_unpartition(Tensor windows, int window_size, (int, int) pad_hw, (int, int) hw)
 		{
+			using var _ = NewDisposeScope();
 			(int Hp, int Wp) = pad_hw;
 			(int H, int W) = hw;
 
@@ -428,7 +430,7 @@ namespace SamSharp.Modeling
 			{
 				x = x[.., ..H, ..W, ..].contiguous();
 			}
-			return x;
+			return x.MoveToOuterDisposeScope();
 
 		}
 

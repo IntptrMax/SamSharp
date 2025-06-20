@@ -37,6 +37,8 @@
 			groupBox3 = new GroupBox();
 			PictureBox_Mask = new PictureBox();
 			groupBox4 = new GroupBox();
+			groupBox7 = new GroupBox();
+			ComboBox_ScaleType = new ComboBox();
 			groupBox2 = new GroupBox();
 			ComboBox_Device = new ComboBox();
 			Button_ModelLoad = new Button();
@@ -49,11 +51,13 @@
 			NumericUpDown_ImageSize = new NumericUpDown();
 			Button_RemoveLastBox = new Button();
 			RadioButton_Box = new RadioButton();
+			Button_Auto = new Button();
 			groupBox1.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)PictureBox_Image).BeginInit();
 			groupBox3.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)PictureBox_Mask).BeginInit();
 			groupBox4.SuspendLayout();
+			groupBox7.SuspendLayout();
 			groupBox2.SuspendLayout();
 			groupBox5.SuspendLayout();
 			groupBox6.SuspendLayout();
@@ -86,9 +90,9 @@
 			// 
 			// Button_Run
 			// 
-			Button_Run.Location = new Point(746, 18);
+			Button_Run.Location = new Point(776, 18);
 			Button_Run.Name = "Button_Run";
-			Button_Run.Size = new Size(92, 25);
+			Button_Run.Size = new Size(62, 25);
 			Button_Run.TabIndex = 3;
 			Button_Run.Text = "Run";
 			Button_Run.UseVisualStyleBackColor = true;
@@ -119,7 +123,7 @@
 			// 
 			// Button_ImageLoad
 			// 
-			Button_ImageLoad.Location = new Point(736, 41);
+			Button_ImageLoad.Location = new Point(739, 42);
 			Button_ImageLoad.Name = "Button_ImageLoad";
 			Button_ImageLoad.Size = new Size(102, 24);
 			Button_ImageLoad.TabIndex = 0;
@@ -149,6 +153,7 @@
 			// 
 			// groupBox4
 			// 
+			groupBox4.Controls.Add(groupBox7);
 			groupBox4.Controls.Add(groupBox2);
 			groupBox4.Controls.Add(Button_ModelLoad);
 			groupBox4.Controls.Add(Button_ImageLoad);
@@ -159,10 +164,30 @@
 			groupBox4.TabIndex = 3;
 			groupBox4.TabStop = false;
 			// 
+			// groupBox7
+			// 
+			groupBox7.Controls.Add(ComboBox_ScaleType);
+			groupBox7.Location = new Point(482, 22);
+			groupBox7.Name = "groupBox7";
+			groupBox7.Size = new Size(122, 57);
+			groupBox7.TabIndex = 5;
+			groupBox7.TabStop = false;
+			groupBox7.Text = "Scale Type";
+			// 
+			// ComboBox_ScaleType
+			// 
+			ComboBox_ScaleType.DropDownStyle = ComboBoxStyle.DropDownList;
+			ComboBox_ScaleType.FormattingEnabled = true;
+			ComboBox_ScaleType.Items.AddRange(new object[] { "Float16", "Float32", "BFloat16" });
+			ComboBox_ScaleType.Location = new Point(6, 19);
+			ComboBox_ScaleType.Name = "ComboBox_ScaleType";
+			ComboBox_ScaleType.Size = new Size(106, 25);
+			ComboBox_ScaleType.TabIndex = 1;
+			// 
 			// groupBox2
 			// 
 			groupBox2.Controls.Add(ComboBox_Device);
-			groupBox2.Location = new Point(462, 22);
+			groupBox2.Location = new Point(354, 22);
 			groupBox2.Name = "groupBox2";
 			groupBox2.Size = new Size(122, 57);
 			groupBox2.TabIndex = 4;
@@ -173,7 +198,7 @@
 			// 
 			ComboBox_Device.DropDownStyle = ComboBoxStyle.DropDownList;
 			ComboBox_Device.FormattingEnabled = true;
-			ComboBox_Device.Items.AddRange(new object[] { "Cuda", "CPU" });
+			ComboBox_Device.Items.AddRange(new object[] { "CPU", "CUDA" });
 			ComboBox_Device.Location = new Point(6, 19);
 			ComboBox_Device.Name = "ComboBox_Device";
 			ComboBox_Device.Size = new Size(106, 25);
@@ -181,7 +206,7 @@
 			// 
 			// Button_ModelLoad
 			// 
-			Button_ModelLoad.Location = new Point(605, 41);
+			Button_ModelLoad.Location = new Point(619, 42);
 			Button_ModelLoad.Name = "Button_ModelLoad";
 			Button_ModelLoad.Size = new Size(102, 24);
 			Button_ModelLoad.TabIndex = 2;
@@ -195,14 +220,14 @@
 			groupBox5.Controls.Add(TextBox_ModelPath);
 			groupBox5.Location = new Point(6, 20);
 			groupBox5.Name = "groupBox5";
-			groupBox5.Size = new Size(450, 57);
+			groupBox5.Size = new Size(342, 57);
 			groupBox5.TabIndex = 0;
 			groupBox5.TabStop = false;
 			groupBox5.Text = "Model Path";
 			// 
 			// Button_ModelScan
 			// 
-			Button_ModelScan.Location = new Point(369, 24);
+			Button_ModelScan.Location = new Point(261, 24);
 			Button_ModelScan.Name = "Button_ModelScan";
 			Button_ModelScan.Size = new Size(75, 23);
 			Button_ModelScan.TabIndex = 1;
@@ -215,7 +240,7 @@
 			TextBox_ModelPath.Location = new Point(6, 24);
 			TextBox_ModelPath.Name = "TextBox_ModelPath";
 			TextBox_ModelPath.ReadOnly = true;
-			TextBox_ModelPath.Size = new Size(357, 23);
+			TextBox_ModelPath.Size = new Size(249, 23);
 			TextBox_ModelPath.TabIndex = 0;
 			// 
 			// Button_RemoveLastPoint
@@ -230,6 +255,7 @@
 			// 
 			// groupBox6
 			// 
+			groupBox6.Controls.Add(Button_Auto);
 			groupBox6.Controls.Add(label1);
 			groupBox6.Controls.Add(NumericUpDown_ImageSize);
 			groupBox6.Controls.Add(Button_RemoveLastBox);
@@ -248,7 +274,7 @@
 			// label1
 			// 
 			label1.AutoSize = true;
-			label1.Location = new Point(560, 22);
+			label1.Location = new Point(544, 22);
 			label1.Name = "label1";
 			label1.Size = new Size(72, 17);
 			label1.TabIndex = 8;
@@ -257,7 +283,7 @@
 			// NumericUpDown_ImageSize
 			// 
 			NumericUpDown_ImageSize.Increment = new decimal(new int[] { 64, 0, 0, 0 });
-			NumericUpDown_ImageSize.Location = new Point(638, 18);
+			NumericUpDown_ImageSize.Location = new Point(622, 18);
 			NumericUpDown_ImageSize.Maximum = new decimal(new int[] { 8192, 0, 0, 0 });
 			NumericUpDown_ImageSize.Minimum = new decimal(new int[] { 128, 0, 0, 0 });
 			NumericUpDown_ImageSize.Name = "NumericUpDown_ImageSize";
@@ -286,6 +312,16 @@
 			RadioButton_Box.Text = "Box";
 			RadioButton_Box.UseVisualStyleBackColor = true;
 			// 
+			// Button_Auto
+			// 
+			Button_Auto.Location = new Point(709, 18);
+			Button_Auto.Name = "Button_Auto";
+			Button_Auto.Size = new Size(61, 25);
+			Button_Auto.TabIndex = 9;
+			Button_Auto.Text = "Auto";
+			Button_Auto.UseVisualStyleBackColor = true;
+			Button_Auto.Click += Button_Auto_Click;
+			// 
 			// MainForm
 			// 
 			AutoScaleDimensions = new SizeF(7F, 17F);
@@ -296,13 +332,14 @@
 			Controls.Add(groupBox3);
 			Controls.Add(groupBox1);
 			Name = "MainForm";
-			Text = "MainForm";
+			Text = "Segment Anyting Sharp";
 			Load += MainForm_Load;
 			groupBox1.ResumeLayout(false);
 			((System.ComponentModel.ISupportInitialize)PictureBox_Image).EndInit();
 			groupBox3.ResumeLayout(false);
 			((System.ComponentModel.ISupportInitialize)PictureBox_Mask).EndInit();
 			groupBox4.ResumeLayout(false);
+			groupBox7.ResumeLayout(false);
 			groupBox2.ResumeLayout(false);
 			groupBox5.ResumeLayout(false);
 			groupBox5.PerformLayout();
@@ -335,5 +372,8 @@
 		private Button Button_RemoveLastBox;
 		private Label label1;
 		private NumericUpDown NumericUpDown_ImageSize;
+		private GroupBox groupBox7;
+		private ComboBox ComboBox_ScaleType;
+		private Button Button_Auto;
 	}
 }

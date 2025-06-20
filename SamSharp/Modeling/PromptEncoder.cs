@@ -70,6 +70,7 @@ namespace SamSharp.Modeling
 
 		private Tensor _embed_points(Tensor points, Tensor labels, bool pad)
 		{
+			using var _ = NewDisposeScope();
 			points = points + 0.5f;  // Shift to center of pixel
 			if (pad)
 			{
@@ -83,7 +84,7 @@ namespace SamSharp.Modeling
 			point_embedding[labels == -1] += this.not_a_point_embed.weight!;
 			point_embedding[labels == 0] += this.point_embeddings[0].weight!;
 			point_embedding[labels == 1] += this.point_embeddings[1].weight!;
-			return point_embedding;
+			return point_embedding.MoveToOuterDisposeScope();
 		}
 
 		/// <summary>
@@ -93,12 +94,13 @@ namespace SamSharp.Modeling
 		/// <returns></returns>
 		private Tensor _embed_boxes(Tensor boxes)
 		{
+			using var _ = NewDisposeScope();
 			boxes = boxes + 0.5f;  // Shift to center of pixel
 			Tensor coords = boxes.reshape(-1, 2, 2);
 			Tensor corner_embedding = this.pe_layer.forward_with_coords(coords, this.input_image_size);
 			corner_embedding[.., 0, ..] += this.point_embeddings[2].weight!;
 			corner_embedding[.., 1, ..] += this.point_embeddings[3].weight!;
-			return corner_embedding;
+			return corner_embedding.MoveToOuterDisposeScope();
 		}
 
 		/// <summary>
@@ -138,11 +140,6 @@ namespace SamSharp.Modeling
 			}
 		}
 
-		private Device _get_device()
-		{
-			return this.point_embeddings[0].weight!.device;
-		}
-
 		/// <summary>
 		/// Embeds different types of prompts, returning both sparse and dense embeddings.
 		/// </summary>
@@ -154,13 +151,14 @@ namespace SamSharp.Modeling
 		public override (Tensor, Tensor) forward((Tensor, Tensor)? points, Tensor boxes, Tensor masks)
 		{
 			using var _ = NewDisposeScope();
+			(Device device, ScalarType dtype) = Common.GetDeviceAndScaleType(this);
 			long bs = this._get_batch_size(points, boxes, masks);
-			Tensor sparse_embeddings = torch.empty(new long[] { bs, 0, this.embed_dim }, device: this._get_device());
+			Tensor sparse_embeddings = torch.empty(new long[] { bs, 0, this.embed_dim }, device: device, dtype: dtype);
 
 			if (points is not null)
 			{
-				Tensor coords = points.Value.Item1;
-				Tensor labels = points.Value.Item2;
+				Tensor coords = points.Value.Item1.to(dtype, device);
+				Tensor labels = points.Value.Item2.to(dtype, device);
 				Tensor point_embeddings = this._embed_points(coords, labels, pad: (boxes is null));
 				sparse_embeddings = torch.cat(new Tensor[] { sparse_embeddings, point_embeddings }, dim: 1);
 			}
@@ -214,7 +212,7 @@ namespace SamSharp.Modeling
 				y_embed = y_embed / h;
 				x_embed = x_embed / w;
 
-				Tensor pe = this._pe_encoding(torch.stack(new Tensor[] { x_embed, y_embed }, dim: -1));
+				Tensor pe = this._pe_encoding(torch.stack(new Tensor[] { x_embed, y_embed }, dim: -1).to(dtype, device));
 
 				return pe.permute(2, 0, 1).MoveToOuterDisposeScope();  // C X H X W
 			}
@@ -225,7 +223,6 @@ namespace SamSharp.Modeling
 				Tensor coords = coords_input.clone();
 				coords[.., .., 0] = coords[.., .., 0] / image_size.Item2;
 				coords[.., .., 1] = coords[.., .., 1] / image_size.Item1;
-				//return this._pe_encoding(coords.to(torch.float32)); // B X N X C
 				return this._pe_encoding(coords); // B X N X C
 			}
 		}

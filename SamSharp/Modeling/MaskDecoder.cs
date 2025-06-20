@@ -80,7 +80,7 @@ namespace SamSharp.Modeling
 		/// <returns></returns>
 		private (Tensor, Tensor) predict_masks(Tensor image_embeddings, Tensor image_pe, Tensor sparse_prompt_embeddings, Tensor dense_prompt_embeddings)
 		{
-
+			using var _ = NewDisposeScope();
 			// Concatenate output tokens
 			Tensor output_tokens = torch.cat(new Tensor[] { this.iou_token.weight!, this.mask_tokens.weight! }, dim: 0);
 			output_tokens = output_tokens.unsqueeze(0).expand(sparse_prompt_embeddings.size(0), -1, -1);
@@ -123,7 +123,7 @@ namespace SamSharp.Modeling
 			// Generate mask quality predictions
 			Tensor iou_pred = this.iou_prediction_head.forward(iou_token_out);
 
-			return (masks, iou_pred);
+			return (masks.MoveToOuterDisposeScope(), iou_pred.MoveToOuterDisposeScope());
 
 		}
 

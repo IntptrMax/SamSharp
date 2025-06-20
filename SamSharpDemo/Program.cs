@@ -1,5 +1,4 @@
 ﻿using SkiaSharp;
-using System.Threading.Tasks;
 using static SamSharp.Utils.Classes;
 
 namespace SamSharpDemo
@@ -8,47 +7,65 @@ namespace SamSharpDemo
 	{
 		static void Main(string[] args)
 		{
-			string checkpointPath = @".\Assets\sam_vit_b_01ec64.pth";
-			SamDevice device = SamDevice.Cuda; // or SamDevice.Cpu if you want to run on CPU
-			int imageSize = 512; // The maximum size of the image to process, can be adjusted based on your GPU memory
-			SamSharp.Utils.SamPredictor predictor = new SamSharp.Utils.SamPredictor(checkpointPath, device);
+			string checkpointPath = @".\Assets\sam_vit_h_4b8939.pth";
+			SamDevice device = SamDevice.CUDA; // or SamDevice.Cpu if you want to run on CPU
+			SamScalarType dtype = SamScalarType.Float32;
+			int imageSize = 1024; // The maximum size of the image to process, can be adjusted based on your GPU memory
 
-			SKBitmap image = SKBitmap.Decode(@".\Assets\truck.jpg");
+			SKBitmap image = SKBitmap.Decode(@"..\..\..\Assets\dog.jpg");
 
-			List<SamPoint> points = new List<SamPoint>
-			{
-				new SamPoint(500, 375, false),
-				new SamPoint(1524,675, false),
-			};
-			List<SamBox> boxes = new List<SamBox>
-			{
-				new SamBox(75, 275, 1725, 850),
-				new SamBox(425, 600, 700, 875),
-				new SamBox(1375, 550, 1650, 800),
-				new SamBox(1240, 675, 1400, 750),
-			};
+			// Use Automatic Mask Generator
+			SamSharp.Utils.SamAutomaticMaskGenerator generator = new SamSharp.Utils.SamAutomaticMaskGenerator(checkpointPath, device: device, dtype: dtype);
+			List<PredictOutput> outputs = generator.generate(image, maxImageSize: imageSize);
 
-			List<PredictOutput> outputs = predictor.Predict(image, points, boxes, imageSize);
+			//// Use predictor
+			//SamSharp.Utils.SamPredictor predictor = new SamSharp.Utils.SamPredictor(checkpointPath, device, dtype);
+			//List<SamPoint> points = new List<SamPoint>
+			//{
+			//	new SamPoint(500, 375, false),
+			//	new SamPoint(1524,675, false),
+			//};
+			//List<SamBox> boxes = new List<SamBox>
+			//{
+			//	new SamBox(75, 275, 1725, 850),
+			//	new SamBox(425, 600, 700, 875),
+			//	new SamBox(1375, 550, 1650, 800),
+			//	new SamBox(1240, 675, 1400, 750),
+			//};
+			//List<PredictOutput> outputs = predictor.Predict(image, null, boxes, imageSize);
+
 			Console.WriteLine("The predictions are :");
 
 			using (SKCanvas canvas = new SKCanvas(image))
 			{
 				canvas.Clear(SKColors.Transparent);
+				var random = new Random();
+
 				for (int i = 0; i < outputs.Count; i++)
 				{
 					PredictOutput output = outputs[i];
 					Console.WriteLine($"Mask {i}: Precision: {output.Precision * 100:F2}%");
 					bool[,] mask = output.Mask;
-					Random random = new Random();
+
 					SKColor color = new SKColor((byte)random.Next(256), (byte)random.Next(256), (byte)random.Next(256));
-					for (int y = 0; y < mask.GetLength(1); y++)
+					using (var paint = new SKPaint { Color = color, BlendMode = SKBlendMode.Src })
 					{
-						for (int x = 0; x < mask.GetLength(0); x++)
+						int width = mask.GetLength(0);
+						int height = mask.GetLength(1);
+
+						using (var path = new SKPath())
 						{
-							if (mask[x, y])
+							for (int y = 0; y < height; y++)
 							{
-								canvas.DrawPoint(x, y, color);
+								for (int x = 0; x < width; x++)
+								{
+									if (mask[x, y])
+									{
+										path.AddRect(new SKRect(x, y, x + 1, y + 1));
+									}
+								}
 							}
+							canvas.DrawPath(path, paint);
 						}
 					}
 				}

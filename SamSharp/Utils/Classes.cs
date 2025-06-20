@@ -1,4 +1,6 @@
 ﻿using SkiaSharp;
+using TorchSharp;
+using static SamSharp.Utils.Classes;
 using static TorchSharp.torch;
 
 namespace SamSharp.Utils
@@ -8,7 +10,7 @@ namespace SamSharp.Utils
 		/// <summary>
 		/// A class representing a batched input to the SAM model.
 		/// </summary>
-		public class BatchedInput
+		public class BatchedInput : IDisposable
 		{
 			/// <summary>
 			/// The image as a torch tensor in 3xHxW format, already transformed for input to the model.
@@ -40,16 +42,22 @@ namespace SamSharp.Utils
 			///	</summary>
 			public long[] Original_size { get; set; }
 
-			public void to(Device? device = null)
+			public void to(Device? device, ScalarType? dtype)
 			{
-				if (device is not null)
-				{
-					Image = Image?.to(device);
-					Point_coords = Point_coords?.to(device);
-					Point_labels = Point_labels?.to(device);
-					Boxes = Boxes?.to(device);
-					Mask_inputs = Mask_inputs?.to(device);
-				}
+				Image = Image?.to(dtype ?? Image.dtype, device ?? Image.device);
+				Point_coords = Point_coords?.to(dtype ?? Point_coords.dtype, device ?? Point_coords.device);
+				Point_labels = Point_labels?.to(dtype ?? Point_labels.dtype, device ?? Point_labels.device);
+				Boxes = Boxes?.to(dtype ?? Boxes.dtype, device ?? Boxes.device);
+				Mask_inputs = Mask_inputs?.to(dtype ?? Mask_inputs.dtype, device ?? Mask_inputs.device);
+			}
+
+			public void Dispose()
+			{
+				Image?.Dispose();
+				Point_coords?.Dispose();
+				Point_labels?.Dispose();
+				Boxes?.Dispose();
+				Mask_inputs?.Dispose();
 			}
 		}
 
@@ -72,6 +80,20 @@ namespace SamSharp.Utils
 			/// Low resolution logits with shape BxCxHxW, where H = W = 256.Can be passed as mask input to subsequent iterations of prediction.
 			/// </summary>
 			public Tensor Low_res_logits { get; set; }
+
+			public void to(Device? device = null, ScalarType? dtype = null)
+			{
+				Masks = Masks?.to(dtype ?? Masks.dtype, device ?? Masks.device);
+				Iou_predictions = Iou_predictions?.to(dtype ?? Iou_predictions.dtype, device ?? Iou_predictions.device);
+				Low_res_logits = Low_res_logits?.to(dtype ?? Low_res_logits.dtype, device ?? Low_res_logits.device);
+			}
+
+			public void Dispose()
+			{
+				Masks?.Dispose();
+				Iou_predictions?.Dispose();
+				Low_res_logits?.Dispose();
+			}
 		}
 
 		public enum SamType
@@ -79,6 +101,13 @@ namespace SamSharp.Utils
 			VitB,
 			VitL,
 			VitH
+		}
+
+		public enum OutputMode
+		{
+			BinaryMask,
+			UncompressedRle,
+			CocoRle,
 		}
 
 		public class SamPoint
@@ -128,8 +157,106 @@ namespace SamSharp.Utils
 
 		public enum SamDevice
 		{
-			Cuda = 0,
-			CPU,
+			CPU = 0,
+			CUDA = 1,
 		}
+
+		public enum SamScalarType
+		{
+			Float16 = 5,
+			Float32 = 6,
+			BFloat16 = 15
+		}
+
+		//public class MaskData : IDisposable
+		//{
+		//	public Tensor IouPreds { get; set; }
+
+		//	public Tensor Points { get; set; }
+
+		//	public Tensor StabilityScore { get; set; }
+		//	public Tensor Boxes { get; set; }
+		//	public List<Rle> Rles { get; set; }
+
+		//	public void Concat(MaskData data)
+		//	{
+		//		IouPreds = IouPreds is null ? data.IouPreds : torch.concat(new Tensor[] { IouPreds, data.IouPreds });
+		//		Points = Points is null ? data.Points : torch.concat(new Tensor[] { Points, data.Points });
+		//		StabilityScore = StabilityScore is null ? data.StabilityScore : torch.concat(new Tensor[] { StabilityScore, data.StabilityScore });
+		//		Boxes = Boxes is null ? data.Boxes : torch.concat(new Tensor[] { Boxes, data.Boxes });
+		//		if (Rles is null)
+		//		{
+		//			Rles = data.Rles;
+		//		}
+		//		else
+		//		{
+		//			Rles.AddRange(data.Rles);
+		//		}
+		//	}
+
+		//	public void Dispose()
+		//	{
+		//		IouPreds?.Dispose();
+		//		Points?.Dispose();
+		//		StabilityScore?.Dispose();
+		//		Boxes?.Dispose();
+		//		Rles.Clear();
+		//	}
+
+		//	public void Filter(Tensor index)
+		//	{
+		//		IouPreds = IouPreds[torch.as_tensor(index, device: IouPreds.device)];
+		//		Points = Points[torch.as_tensor(index, device: Points.device)];
+		//		StabilityScore = StabilityScore[torch.as_tensor(index, device: StabilityScore.device)];
+		//		Boxes = Boxes[torch.as_tensor(index, device: Boxes.device)];
+		//		long[] indexs = index.data<long>().ToArray();
+		//		Rles = indexs.Where(i => i >= 0 && i < Rles.Count).Select(i => Rles[(int)i]).ToList();
+		//	}
+		//}
+
+		public class MaskData : IDisposable
+		{
+			public Tensor IouPreds { get; set; }
+
+			public Tensor Points { get; set; }
+
+			public Tensor StabilityScore { get; set; }
+			public Tensor Boxes { get; set; }
+			public Tensor Masks { get; set; }
+
+			public void Concat(MaskData data)
+			{
+				IouPreds = IouPreds is null ? data.IouPreds : torch.concat(new Tensor[] { IouPreds, data.IouPreds });
+				Points = Points is null ? data.Points : torch.concat(new Tensor[] { Points, data.Points });
+				StabilityScore = StabilityScore is null ? data.StabilityScore : torch.concat(new Tensor[] { StabilityScore, data.StabilityScore });
+				Boxes = Boxes is null ? data.Boxes : torch.concat(new Tensor[] { Boxes, data.Boxes });
+				Masks = Masks is null ? data.Masks : torch.concat(new Tensor[] { Masks, data.Masks });
+			}
+
+			public void Dispose()
+			{
+				IouPreds?.Dispose();
+				Points?.Dispose();
+				StabilityScore?.Dispose();
+				Boxes?.Dispose();
+				Masks?.Dispose();
+			}
+
+			public void Filter(Tensor index)
+			{
+				IouPreds = IouPreds[torch.as_tensor(index, device: IouPreds.device)];
+				Points = Points[torch.as_tensor(index, device: Points.device)];
+				StabilityScore = StabilityScore[torch.as_tensor(index, device: StabilityScore.device)];
+				Boxes = Boxes[torch.as_tensor(index, device: Boxes.device)];
+				Masks = Masks[torch.as_tensor(index, device: Masks.device)];
+			}
+		}
+
+		public class Rle
+		{
+			public int[] Size { get; set; }
+			public List<long> Counts { get; set; }
+		}
+
 	}
 }

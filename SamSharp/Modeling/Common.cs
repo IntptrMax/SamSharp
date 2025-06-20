@@ -18,13 +18,13 @@ namespace SamSharp.Modeling
 
 			private readonly Linear lin1;
 			private readonly Linear lin2;
-			private readonly Module<Tensor,Tensor> act;
+			private readonly Module<Tensor, Tensor> act;
 
 			public MLPBlock(int embedding_dim, int mlp_dim, ActivationType activationType = ActivationType.GELU) : base(nameof(MLPBlock))
 			{
 				this.lin1 = nn.Linear(embedding_dim, mlp_dim);
 				this.lin2 = nn.Linear(mlp_dim, embedding_dim);
-				this.act =  activationType switch
+				this.act = activationType switch
 				{
 					ActivationType.GELU => GELU(),
 					ActivationType.ReLU => ReLU(),
@@ -36,7 +36,8 @@ namespace SamSharp.Modeling
 
 			public override Tensor forward(Tensor x)
 			{
-				return this.lin2.forward(this.act.forward(this.lin1.forward(x)));
+				using var _ = NewDisposeScope();
+				return this.lin2.forward(this.act.forward(this.lin1.forward(x))).MoveToOuterDisposeScope();
 			}
 		}
 
@@ -64,6 +65,16 @@ namespace SamSharp.Modeling
 				return x.MoveToOuterDisposeScope();
 			}
 
+		}
+
+		internal static (Device, ScalarType) GetDeviceAndScaleType(Module module)
+		{
+			var named_parameters = module.named_parameters();
+			if (named_parameters.Count() < 1)
+			{
+				throw new ArgumentNullException($"{module.GetName()} is not Init.");
+			}
+			return (named_parameters.ToArray()[0].parameter.device, named_parameters.ToArray()[0].parameter.dtype);
 		}
 	}
 }

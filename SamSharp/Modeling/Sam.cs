@@ -5,9 +5,9 @@ using static TorchSharp.torch.nn;
 
 namespace SamSharp.Modeling
 {
-	internal class Sam : Module<List<BatchedInput>, bool, List<BatchedOutput>>
+	internal class Sam : Module<BatchedInput, bool, bool, BatchedOutput>
 	{
-		private readonly float mask_threshold = 0.0f;
+		public readonly float mask_threshold = 0.0f;
 		//private readonly string image_format = "RGB";
 
 		public readonly ImageEncoderViT image_encoder;
@@ -40,32 +40,30 @@ namespace SamSharp.Modeling
 		/// <param name="batched_input">Batched inputs for SAM</param>
 		/// <param name="multimask_output">Whether the model should predict multiple disambiguating masks, or return a single mask.</param>
 		/// <returns></returns>
-		public override List<BatchedOutput> forward(List<BatchedInput> batched_input, bool multimask_output)
+		public override BatchedOutput forward(BatchedInput image_record, bool multimask_output, bool return_logits = false)
 		{
 			using var _ = NewDisposeScope();
-			List<Tensor> preprocessedImages = batched_input.Select(x => this.preprocess(x.Image)).ToList();
-			Tensor input_images = torch.cat(preprocessedImages, dim: 0);
-			Tensor image_embeddings = this.image_encoder.forward(input_images);
+			(Device device, ScalarType dtype) = Common.GetDeviceAndScaleType(this);
+			Tensor preprcessedImage = this.preprocess(image_record.Image);
+			Tensor image_embeddings = this.image_encoder.forward(preprcessedImage.to(dtype, device));
 
-			List<BatchedOutput> outputs = new List<BatchedOutput>();
-			for (int i = 0; i < batched_input.Count; i++)
+			image_record.to(device, dtype);
+			//Tensor curr_embedding = image_embeddings;
+			(Tensor, Tensor)? points = image_record.Point_coords is not null ? (image_record.Point_coords, image_record.Point_labels) : null;
+			(Tensor sparse_embeddings, Tensor dense_embeddings) = this.prompt_encoder.forward(points: points, boxes: image_record.Boxes, masks: image_record.Mask_inputs);
+			(Tensor low_res_masks, Tensor iou_predictions) = this.mask_decoder.forward(image_embeddings: image_embeddings, image_pe: this.prompt_encoder.get_dense_pe(), sparse_prompt_embeddings: sparse_embeddings, dense_prompt_embeddings: dense_embeddings, multimask_output: multimask_output);
+			Tensor masks = this.postprocess_masks(low_res_masks, input_size: new long[] { image_record.Image.shape[2], image_record.Image.shape[3] }, original_size: image_record.Original_size);
+			if (!return_logits)
 			{
-				BatchedInput image_record = batched_input[i];
-				Tensor curr_embedding = image_embeddings[i];
-				(Tensor, Tensor)? points = image_record.Point_coords is not null ? (image_record.Point_coords, image_record.Point_labels) : null;
-				(Tensor sparse_embeddings, Tensor dense_embeddings) = this.prompt_encoder.forward(points: points, boxes: image_record.Boxes, masks: image_record.Mask_inputs);
-				(Tensor low_res_masks, Tensor iou_predictions) = this.mask_decoder.forward(image_embeddings = curr_embedding.unsqueeze(0), image_pe: this.prompt_encoder.get_dense_pe(), sparse_prompt_embeddings: sparse_embeddings, dense_prompt_embeddings: dense_embeddings, multimask_output: multimask_output);
-				Tensor masks = this.postprocess_masks(low_res_masks, input_size: new long[] { image_record.Image.shape[2], image_record.Image.shape[3] }, original_size: image_record.Original_size);
 				masks = masks > this.mask_threshold;
-
-				outputs.Add(new BatchedOutput
-				{
-					Masks = masks.MoveToOuterDisposeScope(),
-					Iou_predictions = iou_predictions.MoveToOuterDisposeScope(),
-					Low_res_logits = low_res_masks.MoveToOuterDisposeScope()
-				});
 			}
-			return outputs;
+
+			return new BatchedOutput
+			{
+				Masks = masks.MoveToOuterDisposeScope(),
+				Iou_predictions = iou_predictions.MoveToOuterDisposeScope(),
+				Low_res_logits = low_res_masks.MoveToOuterDisposeScope()
+			};
 		}
 
 		/// <summary>
@@ -89,7 +87,8 @@ namespace SamSharp.Modeling
 		/// </summary>
 		public Tensor preprocess(Tensor x)
 		{
-			Tensor pixel_mean_tensor = tensor(this.pixel_mean).unsqueeze(-1).unsqueeze(-1).to(x.dtype,x.device);
+			using var _ = NewDisposeScope();
+			Tensor pixel_mean_tensor = tensor(this.pixel_mean).unsqueeze(-1).unsqueeze(-1).to(x.dtype, x.device);
 			Tensor pixel_std_tensor = tensor(this.pixel_std).unsqueeze(-1).unsqueeze(-1).to(x.dtype, x.device);
 			// Normalize colors
 			x = (x - pixel_std_tensor) / pixel_std_tensor;
@@ -99,8 +98,8 @@ namespace SamSharp.Modeling
 
 			long padh = this.image_encoder.img_size - h;
 			long padw = this.image_encoder.img_size - w;
-			x = torch.nn.functional.pad(x, new long[] { 0, padw, 0, padh }).to(x.dtype, x.device);
-			return x;
+			x = torch.nn.functional.pad(x, new long[] { 0, padw, 0, padh });
+			return x.MoveToOuterDisposeScope();
 		}
 
 	}
