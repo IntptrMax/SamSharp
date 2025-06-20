@@ -153,7 +153,7 @@ using (var stream = File.OpenWrite($"mask.png"))
 
 ```
 The result mask is.
-![image](https://raw.githubusercontent.com/IntptrMax/SamSharp/refs/heads/master/Assets/dog.jpg)
+![image](https://raw.githubusercontent.com/IntptrMax/SamSharp/refs/heads/master/Assets/mask_dog.png)
 
 
 ## Work to do
