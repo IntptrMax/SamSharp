@@ -1,6 +1,5 @@
-﻿using SkiaSharp;
+﻿using System;
 using TorchSharp;
-using static SamSharp.Utils.Classes;
 using static TorchSharp.torch;
 
 namespace SamSharp.Utils
@@ -12,11 +11,6 @@ namespace SamSharp.Utils
 		/// </summary>
 		public class BatchedInput : IDisposable
 		{
-			/// <summary>
-			/// The image as a torch tensor in 3xHxW format, already transformed for input to the model.
-			/// </summary>
-			public Tensor Image { get; set; }
-
 			/// <summary>
 			/// Batched point prompts for this image, with shape BxNx2.Already transformed to the input frame of the model.
 			/// </summary>
@@ -41,10 +35,10 @@ namespace SamSharp.Utils
 			///	The original size of the image before transformation, as (H, W).
 			///	</summary>
 			public long[] Original_size { get; set; }
+			public long[] Input_size { get; set; }
 
 			public void to(Device? device, ScalarType? dtype)
 			{
-				Image = Image?.to(dtype ?? Image.dtype, device ?? Image.device);
 				Point_coords = Point_coords?.to(dtype ?? Point_coords.dtype, device ?? Point_coords.device);
 				Point_labels = Point_labels?.to(dtype ?? Point_labels.dtype, device ?? Point_labels.device);
 				Boxes = Boxes?.to(dtype ?? Boxes.dtype, device ?? Boxes.device);
@@ -53,7 +47,6 @@ namespace SamSharp.Utils
 
 			public void Dispose()
 			{
-				Image?.Dispose();
 				Point_coords?.Dispose();
 				Point_labels?.Dispose();
 				Boxes?.Dispose();
@@ -100,7 +93,8 @@ namespace SamSharp.Utils
 		{
 			VitB,
 			VitL,
-			VitH
+			VitH,
+			VitT,
 		}
 
 		public enum OutputMode
@@ -224,6 +218,8 @@ namespace SamSharp.Utils
 			public Tensor Boxes { get; set; }
 			public Tensor Masks { get; set; }
 
+			public List<Rle> Rles { get; set; }
+
 			public void Concat(MaskData data)
 			{
 				IouPreds = IouPreds is null ? data.IouPreds : torch.concat(new Tensor[] { IouPreds, data.IouPreds });
@@ -231,6 +227,14 @@ namespace SamSharp.Utils
 				StabilityScore = StabilityScore is null ? data.StabilityScore : torch.concat(new Tensor[] { StabilityScore, data.StabilityScore });
 				Boxes = Boxes is null ? data.Boxes : torch.concat(new Tensor[] { Boxes, data.Boxes });
 				Masks = Masks is null ? data.Masks : torch.concat(new Tensor[] { Masks, data.Masks });
+				if (Rles is null)
+				{
+					Rles = data.Rles;
+				}
+				else
+				{
+					Rles.AddRange(data.Rles);
+				}
 			}
 
 			public void Dispose()
@@ -240,15 +244,30 @@ namespace SamSharp.Utils
 				StabilityScore?.Dispose();
 				Boxes?.Dispose();
 				Masks?.Dispose();
+				Rles.Clear();
 			}
 
 			public void Filter(Tensor index)
 			{
+				long[] indexes = index.data<long>().ToArray();
+				List<Rle> newRles = new List<Rle>();
+				foreach (long item in indexes)
+				{
+					if (Rles is not null)
+					{
+						newRles.Add(Rles[(int)item]);
+					}
+				}
+				Rles = newRles;
+
 				IouPreds = IouPreds[torch.as_tensor(index, device: IouPreds.device)];
 				Points = Points[torch.as_tensor(index, device: Points.device)];
 				StabilityScore = StabilityScore[torch.as_tensor(index, device: StabilityScore.device)];
 				Boxes = Boxes[torch.as_tensor(index, device: Boxes.device)];
-				Masks = Masks[torch.as_tensor(index, device: Masks.device)];
+				if (Masks is not null)
+				{
+					Masks = Masks[torch.as_tensor(index, device: Masks.device)];
+				}
 			}
 		}
 

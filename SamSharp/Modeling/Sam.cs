@@ -10,11 +10,13 @@ namespace SamSharp.Modeling
 		public readonly float mask_threshold = 0.0f;
 		//private readonly string image_format = "RGB";
 
-		public readonly ImageEncoderViT image_encoder;
+		public readonly Common.ImageEncoderViTBase image_encoder;
 		public readonly PromptEncoder prompt_encoder;
 		public readonly MaskDecoder mask_decoder;
 		private readonly float[] pixel_mean = new float[] { 123.675f, 116.28f, 103.53f };
 		private readonly float[] pixel_std = new float[] { 58.395f, 57.12f, 57.375f };
+
+		private Tensor image_embeddings = null;
 
 		/// <summary>
 		/// SAM predicts object masks from an image and input prompts.
@@ -24,7 +26,7 @@ namespace SamSharp.Modeling
 		/// <param name="mask_decoder">Predicts masks from the image embeddings and encoded prompts.</param>
 		/// <param name="pixel_mean">Mean values for normalizing pixels in the input image.</param>
 		/// <param name="pixel_std">Std values for normalizing pixels in the input image.</param>
-		public Sam(ImageEncoderViT image_encoder, PromptEncoder prompt_encoder, MaskDecoder mask_decoder, float[] pixel_mean, float[] pixel_std) : base(nameof(Sam))
+		public Sam(Common.ImageEncoderViTBase image_encoder, PromptEncoder prompt_encoder, MaskDecoder mask_decoder, float[] pixel_mean, float[] pixel_std) : base(nameof(Sam))
 		{
 			this.image_encoder = image_encoder;
 			this.prompt_encoder = prompt_encoder;
@@ -32,6 +34,22 @@ namespace SamSharp.Modeling
 			this.pixel_mean = pixel_mean;
 			this.pixel_std = pixel_std;
 			RegisterComponents();
+		}
+
+		public void SetImage(Tensor image)
+		{
+			using var _ = no_grad();
+			(Device device, ScalarType dtype) = Common.GetDeviceAndScaleType(this);
+			if (image.shape.Length == 3)
+			{
+				image = image.unsqueeze(0);
+			}
+			else if (image.shape.Length > 4 || image.shape.Length < 3)
+			{
+				throw new ArgumentException("Image tensor's shape must be 3 or 4");
+			}
+
+			this.image_embeddings = this.image_encoder.forward(this.preprocess(image).to(dtype, device)).MoveToOuterDisposeScope();
 		}
 
 		/// <summary>
@@ -44,15 +62,15 @@ namespace SamSharp.Modeling
 		{
 			using var _ = NewDisposeScope();
 			(Device device, ScalarType dtype) = Common.GetDeviceAndScaleType(this);
-			Tensor preprcessedImage = this.preprocess(image_record.Image);
-			Tensor image_embeddings = this.image_encoder.forward(preprcessedImage.to(dtype, device));
-
+			if (this.image_embeddings is null)
+			{
+				throw new NullReferenceException("Image Embeddings is null, please use SetImage before forward.");
+			}
 			image_record.to(device, dtype);
-			//Tensor curr_embedding = image_embeddings;
 			(Tensor, Tensor)? points = image_record.Point_coords is not null ? (image_record.Point_coords, image_record.Point_labels) : null;
 			(Tensor sparse_embeddings, Tensor dense_embeddings) = this.prompt_encoder.forward(points: points, boxes: image_record.Boxes, masks: image_record.Mask_inputs);
-			(Tensor low_res_masks, Tensor iou_predictions) = this.mask_decoder.forward(image_embeddings: image_embeddings, image_pe: this.prompt_encoder.get_dense_pe(), sparse_prompt_embeddings: sparse_embeddings, dense_prompt_embeddings: dense_embeddings, multimask_output: multimask_output);
-			Tensor masks = this.postprocess_masks(low_res_masks, input_size: new long[] { image_record.Image.shape[2], image_record.Image.shape[3] }, original_size: image_record.Original_size);
+			(Tensor low_res_masks, Tensor iou_predictions) = this.mask_decoder.forward(image_embeddings: this.image_embeddings, image_pe: this.prompt_encoder.get_dense_pe(), sparse_prompt_embeddings: sparse_embeddings, dense_prompt_embeddings: dense_embeddings, multimask_output: multimask_output);
+			Tensor masks = this.postprocess_masks(low_res_masks, input_size: image_record.Input_size, original_size: image_record.Original_size);
 			if (!return_logits)
 			{
 				masks = masks > this.mask_threshold;

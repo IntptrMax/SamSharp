@@ -7,32 +7,34 @@ namespace SamSharpDemo
 	{
 		static void Main(string[] args)
 		{
-			string checkpointPath = @".\Assets\sam_vit_h_4b8939.pth";
+			string checkpointPath = @"..\..\..\Assets\Weights\MobileSam.pt";
 			SamDevice device = SamDevice.CUDA; // or SamDevice.Cpu if you want to run on CPU
-			SamScalarType dtype = SamScalarType.Float32;
-			int imageSize = 1024; // The maximum size of the image to process, can be adjusted based on your GPU memory
+			SamScalarType dtype = SamScalarType.Float32; // Maybe SamScalarType.Float16 or SamScalarType.BFloat16 will get None result.
+			int imageSize = 512; // The maximum size of the image to process, can be adjusted based on your GPU memory
 
-			SKBitmap image = SKBitmap.Decode(@"..\..\..\Assets\dog.jpg");
+			SKBitmap image = SKBitmap.Decode(@"..\..\..\Assets\Images\truck.jpg");
 
-			// Use Automatic Mask Generator
-			SamSharp.Utils.SamAutomaticMaskGenerator generator = new SamSharp.Utils.SamAutomaticMaskGenerator(checkpointPath, device: device, dtype: dtype);
-			List<PredictOutput> outputs = generator.generate(image, maxImageSize: imageSize);
+			//// Use Automatic Mask Generator
+			//SamSharp.Utils.SamAutomaticMaskGenerator generator = new SamSharp.Utils.SamAutomaticMaskGenerator(checkpointPath, device: device, dtype: dtype);
+			//List<PredictOutput> outputs = generator.generate(image, maxImageSize: imageSize);
 
-			//// Use predictor
-			//SamSharp.Utils.SamPredictor predictor = new SamSharp.Utils.SamPredictor(checkpointPath, device, dtype);
-			//List<SamPoint> points = new List<SamPoint>
-			//{
-			//	new SamPoint(500, 375, false),
-			//	new SamPoint(1524,675, false),
-			//};
-			//List<SamBox> boxes = new List<SamBox>
-			//{
-			//	new SamBox(75, 275, 1725, 850),
-			//	new SamBox(425, 600, 700, 875),
-			//	new SamBox(1375, 550, 1650, 800),
-			//	new SamBox(1240, 675, 1400, 750),
-			//};
-			//List<PredictOutput> outputs = predictor.Predict(image, null, boxes, imageSize);
+			// Use predictor
+			SamSharp.Utils.SamPredictor predictor = new SamSharp.Utils.SamPredictor(checkpointPath, device, dtype);
+			List<SamPoint> points = new List<SamPoint>
+			{
+				new SamPoint(500, 375, false),
+				new SamPoint(1524,675, false),
+			};
+			List<SamBox> boxes = new List<SamBox>
+			{
+				new SamBox(75, 275, 1725, 850),
+				new SamBox(425, 600, 700, 875),
+				new SamBox(1375, 550, 1650, 800),
+				new SamBox(1240, 675, 1400, 750),
+			};
+
+			predictor.SetImage(image);
+			List<PredictOutput> outputs = predictor.Predict(null, boxes);
 
 			Console.WriteLine("The predictions are :");
 

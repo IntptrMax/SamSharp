@@ -16,6 +16,7 @@ namespace SamSharp.Utils
 				314 => build_sam_vit_b(checkpoint, device, dtype),
 				594 => build_sam_vit_h(checkpoint, device, dtype),
 				482 => build_sam_vit_l(checkpoint, device, dtype),
+				439 => build_sam_vit_t(checkpoint, device, dtype),
 				_ => throw new ArgumentException("Invalid SAM type specified.")
 			};
 		}
@@ -29,7 +30,7 @@ namespace SamSharp.Utils
 				encoder_global_attn_indexes: new int[] { 7, 15, 23, 31 },
 				checkpoint: checkpoint,
 				device: device,
-				dtype:dtype);
+				dtype: dtype);
 		}
 
 		private static Sam build_sam_vit_l(string checkpoint, Device device, ScalarType dtype)
@@ -44,7 +45,6 @@ namespace SamSharp.Utils
 				dtype: dtype);
 		}
 
-
 		private static Sam build_sam_vit_b(string checkpoint, Device device, ScalarType dtype)
 		{
 			return _build_sam(
@@ -55,6 +55,65 @@ namespace SamSharp.Utils
 				checkpoint: checkpoint,
 				device: device,
 				dtype: dtype);
+		}
+
+		private static Sam build_sam_vit_t(string checkpoint, Device device, ScalarType dtype)
+		{
+			int prompt_embed_dim = 256;
+			int image_size = 1024;
+			int vit_patch_size = 16;
+			int image_embedding_size = image_size / vit_patch_size;
+
+			device = device ?? CPU;
+
+			TinyViT image_encoder = new TinyViT(
+					imgSize: 1024,
+					inChans: 3,
+					numClasses: 1000,
+					embedDims: new[] { 64, 128, 160, 320 },
+					depths: new[] { 2, 2, 6, 2 },
+					numHeads: new[] { 2, 4, 5, 10 },
+					windowSizes: new[] { 7, 7, 14, 7 },
+					mlpRatio: 4.0f,
+					dropRate: 0.0f,
+					dropPathRate: 0.0,
+					useCheckpoint: false,
+					mbconvExpandRatio: 4.0f,
+					localConvSize: 3,
+					layerLrDecay: 0.8f);
+			PromptEncoder promptEncoder = new PromptEncoder(
+				embed_dim: prompt_embed_dim,
+				image_embedding_size: (image_embedding_size, image_embedding_size),
+				input_image_size: (image_size, image_size),
+				mask_in_chans: 16).to(device, dtype);
+
+			MaskDecoder maskDecoder = new MaskDecoder(
+				num_multimask_outputs: 3,
+				transformer: new TwoWayTransformer(
+					depth: 2,
+					embedding_dim: prompt_embed_dim,
+					mlp_dim: 2048,
+					num_heads: 8),
+				transformer_dim: prompt_embed_dim,
+				iou_head_depth: 3,
+				iou_head_hidden_dim: 256).to(device, dtype);
+			Sam sam = new Sam(
+			image_encoder: image_encoder,
+			prompt_encoder: promptEncoder,
+			mask_decoder: maskDecoder,
+			pixel_mean: new float[] { 123.675f, 116.28f, 103.53f },
+			pixel_std: new float[] { 58.395f, 57.12f, 57.375f });
+
+			if (!string.IsNullOrEmpty(checkpoint))
+			{
+				Dictionary<string, Tensor> state_dict = PickleLoader.Load(checkpoint);
+				(var error, var missing) = sam.load_state_dict(state_dict, strict: false);
+				if (error.Count + missing.Count > 0)
+				{
+					throw new ArgumentException("Error loading state dict");
+				}
+			}
+			return sam.to(device, dtype);
 		}
 
 		private static Sam _build_sam(int encoder_embed_dim, int encoder_depth, int encoder_num_heads, int[] encoder_global_attn_indexes, string? checkpoint = null, Device? device = null, ScalarType dtype = ScalarType.Float32)
@@ -112,7 +171,7 @@ namespace SamSharp.Utils
 					throw new ArgumentException("Error loading state dict");
 				}
 			}
-			return sam.to(device,dtype);
+			return sam.to(device, dtype);
 		}
 	}
 }

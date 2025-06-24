@@ -18,7 +18,6 @@ namespace SamSharp.Utils
 		private readonly float crop_nms_thresh = 0.7f;
 		private readonly float crop_overlap_ratio = 512.0f / 1500;
 		private readonly int crop_n_points_downscale_factor = 1;
-		// point_grids: Optional[List[np.ndarray]] = None,
 		private readonly List<Tensor> point_grids;
 		private readonly int min_mask_region_area = 0;
 		private readonly OutputMode output_mode = OutputMode.BinaryMask;
@@ -99,8 +98,8 @@ namespace SamSharp.Utils
 			int newW = (int)Math.Ceiling(orig_w * scaleFactor / 4) * 4;
 			int newH = (int)Math.Ceiling(orig_h * scaleFactor / 4) * 4;
 			imgTensor = torchvision.transforms.functional.resize(imgTensor, newH, newW).unsqueeze(0);
+			model.SetImage(imgTensor);
 			long[] original_size = new long[] { orig_h, orig_w };
-
 			float xStart = (float)newW / points_per_batch;
 			float yStep = (float)newH / points_per_side;
 			float yStart = yStep / 2;
@@ -108,7 +107,6 @@ namespace SamSharp.Utils
 			MaskData data = new MaskData();
 
 			List<BatchedOutput> outputs = new List<BatchedOutput>();
-
 			for (int y = 0; y < this.points_per_side / 2; y++)
 			{
 				Tensor points = torch.zeros(new long[] { points_per_batch, 2 });
@@ -117,9 +115,10 @@ namespace SamSharp.Utils
 				points[..(this.points_per_batch / 2), 1] = yStart + yStep * (y * 2 + 0);
 				points[(this.points_per_batch / 2).., 1] = yStart + yStep * (y * 2 + 1);
 				Tensor labels = torch.ones(points.shape[0]);
-				BatchedInput batched = new BatchedInput { Image = imgTensor, Point_coords = points, Point_labels = labels, Original_size = original_size };
+				BatchedInput batched = new BatchedInput { Point_coords = points, Point_labels = labels, Original_size = original_size, Input_size = new long[] { newH, newW } };
 				MaskData tempData = _process_batch(batched, crop_box, orig_w, orig_h);
 				data.Concat(tempData);
+				batched.Dispose();
 				GC.Collect();
 			}
 
@@ -151,7 +150,7 @@ namespace SamSharp.Utils
 		internal BatchedOutput _process_eproch(BatchedInput batched, int[] crop_box, long orig_w, long orig_h)
 		{
 			using var _ = no_grad();
-			using var __ = NewDisposeScope();
+			//using var __ = NewDisposeScope();
 
 			Tensor points = batched.Point_coords;
 			batched.Point_coords = batched.Point_coords[.., TensorIndex.None, ..];
@@ -159,24 +158,22 @@ namespace SamSharp.Utils
 
 			BatchedOutput output = model.forward(batched, true, true);
 			output.to(CPU);
-			output.Masks = output.Masks.MoveToOuterDisposeScope();
-			output.Iou_predictions = output.Iou_predictions.MoveToOuterDisposeScope();
-			output.Low_res_logits = output.Low_res_logits.MoveToOuterDisposeScope();
+			output.Masks = output.Masks;
+			output.Iou_predictions = output.Iou_predictions;
+			output.Low_res_logits = output.Low_res_logits;
 			return output;
 		}
 
-		//internal MaskData _process_batch(BatchedInput batched, int[] crop_box, long orig_w, long orig_h)
+		//internal MaskData _process_batch_1(BatchedInput batched, int[] crop_box, long orig_w, long orig_h)
 		//{
 		//	using var _ = no_grad();
 		//	using var __ = NewDisposeScope();
-
 
 		//	Tensor points = batched.Point_coords;
 		//	batched.Point_coords = batched.Point_coords[.., TensorIndex.None, ..];
 		//	batched.Point_labels = batched.Point_labels[.., TensorIndex.None];
 
 		//	BatchedOutput output = model.forward(batched, true, true);
-		//	output.to(CPU);
 
 		//	Tensor indexs = torch.zeros(0);
 		//	Tensor masks = output.Masks.flatten(0, 1);
@@ -188,7 +185,6 @@ namespace SamSharp.Utils
 		//		masks = masks[indexs];
 		//		iouPredictions = iouPredictions[indexs];
 		//		pts = pts[indexs];
-
 		//	}
 
 		//	Tensor stability_score = Amg.calculate_stability_score(masks, model.mask_threshold, this.stability_score_offset);
@@ -239,13 +235,11 @@ namespace SamSharp.Utils
 			using var _ = no_grad();
 			using var __ = NewDisposeScope();
 
-
 			Tensor points = batched.Point_coords;
 			batched.Point_coords = batched.Point_coords[.., TensorIndex.None, ..];
 			batched.Point_labels = batched.Point_labels[.., TensorIndex.None];
 
 			BatchedOutput output = model.forward(batched, true, true);
-			output.to(CPU);
 
 			Tensor indexs = torch.zeros(0);
 			Tensor masks = output.Masks.flatten(0, 1);
@@ -288,18 +282,12 @@ namespace SamSharp.Utils
 
 			return new MaskData
 			{
-				Boxes = boxes.cpu().MoveToOuterDisposeScope(),
-				IouPreds = iouPredictions.cpu().MoveToOuterDisposeScope(),
-				Points = pts.cpu().MoveToOuterDisposeScope(),
-				Masks = masks.cpu().MoveToOuterDisposeScope(),
-				StabilityScore = stability_score.cpu().MoveToOuterDisposeScope(),
+				Boxes = boxes.to(CPU).MoveToOuterDisposeScope(),
+				IouPreds = iouPredictions.to(CPU).MoveToOuterDisposeScope(),
+				Points = pts.to(CPU).MoveToOuterDisposeScope(),
+				Masks = masks.to(CPU).MoveToOuterDisposeScope(),
+				StabilityScore = stability_score.to(CPU).MoveToOuterDisposeScope(),
 			};
 		}
-
-		private void _process_crop(int[] crop_box, int layer)
-		{
-
-		}
-
 	}
 }

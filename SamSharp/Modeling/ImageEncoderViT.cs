@@ -1,5 +1,4 @@
-﻿using TorchSharp;
-using TorchSharp.Modules;
+﻿using TorchSharp.Modules;
 using static SamSharp.Modeling.Common;
 using static TorchSharp.torch;
 using static TorchSharp.torch.nn;
@@ -9,7 +8,7 @@ namespace SamSharp.Modeling
 	/// <summary>
 	/// This class and its supporting functions below lightly adapted from the ViTDet backbone available at: https://github.com/facebookresearch/detectron2/blob/main/detectron2/Modeling/backbone/vit.py 
 	/// </summary>
-	internal class ImageEncoderViT : Module<Tensor, Tensor>
+	internal class ImageEncoderViT : Common.ImageEncoderViTBase
 	{
 		private readonly PatchEmbed patch_embed;
 		private readonly Parameter? pos_embed;
@@ -47,7 +46,7 @@ namespace SamSharp.Modeling
 		bool use_rel_pos = false,
 		bool rel_pos_zero_init = true,
 		int window_size = 0,
-		int[]? global_attn_indexes = null) : base(nameof(ImageEncoderViT))
+		int[]? global_attn_indexes = null) : base(img_size: img_size)
 		{
 			this.img_size = img_size;
 			patch_embed = new PatchEmbed(kernel_size: patch_size, stride: patch_size, in_chans: in_chans, embed_dim: embed_dim);

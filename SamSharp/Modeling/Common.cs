@@ -7,6 +7,15 @@ namespace SamSharp.Modeling
 {
 	internal class Common
 	{
+		public abstract class ImageEncoderViTBase : Module<Tensor, Tensor>
+		{
+			public readonly int img_size;
+			public ImageEncoderViTBase(int img_size) : base(nameof(ImageEncoderViTBase))
+			{
+				this.img_size = img_size;
+			}
+		}
+
 		internal class MLPBlock : Module<Tensor, Tensor>
 		{
 			public enum ActivationType

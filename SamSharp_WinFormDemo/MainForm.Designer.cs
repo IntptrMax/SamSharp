@@ -51,7 +51,6 @@
 			NumericUpDown_ImageSize = new NumericUpDown();
 			Button_RemoveLastBox = new Button();
 			RadioButton_Box = new RadioButton();
-			Button_Auto = new Button();
 			groupBox1.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)PictureBox_Image).BeginInit();
 			groupBox3.SuspendLayout();
@@ -90,9 +89,9 @@
 			// 
 			// Button_Run
 			// 
-			Button_Run.Location = new Point(776, 18);
+			Button_Run.Location = new Point(739, 18);
 			Button_Run.Name = "Button_Run";
-			Button_Run.Size = new Size(62, 25);
+			Button_Run.Size = new Size(99, 25);
 			Button_Run.TabIndex = 3;
 			Button_Run.Text = "Run";
 			Button_Run.UseVisualStyleBackColor = true;
@@ -255,7 +254,6 @@
 			// 
 			// groupBox6
 			// 
-			groupBox6.Controls.Add(Button_Auto);
 			groupBox6.Controls.Add(label1);
 			groupBox6.Controls.Add(NumericUpDown_ImageSize);
 			groupBox6.Controls.Add(Button_RemoveLastBox);
@@ -312,16 +310,6 @@
 			RadioButton_Box.Text = "Box";
 			RadioButton_Box.UseVisualStyleBackColor = true;
 			// 
-			// Button_Auto
-			// 
-			Button_Auto.Location = new Point(709, 18);
-			Button_Auto.Name = "Button_Auto";
-			Button_Auto.Size = new Size(61, 25);
-			Button_Auto.TabIndex = 9;
-			Button_Auto.Text = "Auto";
-			Button_Auto.UseVisualStyleBackColor = true;
-			Button_Auto.Click += Button_Auto_Click;
-			// 
 			// MainForm
 			// 
 			AutoScaleDimensions = new SizeF(7F, 17F);
@@ -374,6 +362,5 @@
 		private NumericUpDown NumericUpDown_ImageSize;
 		private GroupBox groupBox7;
 		private ComboBox ComboBox_ScaleType;
-		private Button Button_Auto;
 	}
 }

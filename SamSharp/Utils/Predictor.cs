@@ -1,6 +1,5 @@
 ﻿using SamSharp.Modeling;
 using SkiaSharp;
-using System.Linq;
 using TorchSharp;
 using static SamSharp.Utils.Classes;
 using static TorchSharp.torch;
@@ -26,6 +25,10 @@ namespace SamSharp.Utils
 		private readonly Device device;
 		private readonly ScalarType dtype;
 
+		private long[] original_size = null;
+		private float scaleFactor = 0.0f;
+
+
 		/// <summary>
 		/// Init Predictor, you don't have to choose Vit-b, Vit-l or Vit-H. It will be auto selected when loading model.
 		/// </summary>
@@ -39,19 +42,25 @@ namespace SamSharp.Utils
 			this.model = BuildSam.BuildSamModel(checkpointPath, this.device, this.dtype);
 		}
 
-		public List<PredictOutput> Predict(SKBitmap image, List<SamPoint> points = null, List<SamBox> boxes = null, int maxImageSize = 1024)
+		public void SetImage(SKBitmap image, int maxImageSize = 1024)
+		{
+			using var _ = no_grad();
+			Tensor imgTensor = Tools.ImageTools.GetTensorFromImage(image);
+			long w = imgTensor.shape[2];
+			long h = imgTensor.shape[1];
+			scaleFactor = Math.Min((float)maxImageSize / w, (float)maxImageSize / h);
+			int newW = (int)Math.Ceiling(w * scaleFactor);
+			int newH = (int)Math.Ceiling(h * scaleFactor);
+			imgTensor = torchvision.transforms.functional.resize(imgTensor, newH, newW);
+			original_size = new long[] { h, w };
+			model.SetImage(imgTensor);
+		}
+
+		public List<PredictOutput> Predict(List<SamPoint> points = null, List<SamBox> boxes = null)
 		{
 			using var _ = no_grad();
 			using var __ = NewDisposeScope();
 			model.eval();
-			Tensor imgTensor = Tools.ImageTools.GetTensorFromImage(image);
-			long w = imgTensor.shape[2];
-			long h = imgTensor.shape[1];
-			float scaleFactor = Math.Min((float)maxImageSize / w, (float)maxImageSize / h);
-			int newW = (int)Math.Ceiling(w * scaleFactor);
-			int newH = (int)Math.Ceiling(h * scaleFactor);
-			imgTensor = torchvision.transforms.functional.resize(imgTensor, newH, newW);
-			long[] original_size = new long[] { h, w };
 
 			Tensor pointsTensor = null;
 			Tensor labelsTensor = null;
@@ -91,10 +100,10 @@ namespace SamSharp.Utils
 
 			BatchedInput batchedInput = new BatchedInput
 			{
-				Image = imgTensor.unsqueeze(0),
 				Point_coords = pointsTensor,
 				Point_labels = labelsTensor,
 				Original_size = original_size,
+				Input_size = new long[] { (long)(original_size[0] * scaleFactor), (long)(original_size[1] * scaleFactor) },
 				Boxes = boxesTensor
 			};
 

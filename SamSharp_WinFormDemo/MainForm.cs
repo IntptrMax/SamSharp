@@ -24,6 +24,12 @@ namespace SamSharp_WinFormDemo
 
 		private void Button_ImageLoad_Click(object sender, EventArgs e)
 		{
+			if (predictor is null)
+			{
+				MessageBox.Show("Model not loaded.");
+				return;
+			}
+
 			OpenFileDialog openFileDialog = new OpenFileDialog
 			{
 				Filter = "Image Files|*.jpg;*.jpeg;*.png;*.bmp;",
@@ -34,7 +40,6 @@ namespace SamSharp_WinFormDemo
 				try
 				{
 					string filePath = openFileDialog.FileName;
-
 					PictureBox_Image.Image = Image.FromFile(filePath);
 					pictureBoxImage = Image.FromFile(filePath);
 					image = SKBitmap.Decode(filePath);
@@ -48,6 +53,7 @@ namespace SamSharp_WinFormDemo
 					samPoints = new List<SamPoint>();
 					samBoxes = new List<SamBox>();
 					DrawPointsAndBoxes();
+					predictor.SetImage(image, (int)NumericUpDown_ImageSize.Value);
 				}
 				catch (Exception ex)
 				{
@@ -96,7 +102,7 @@ namespace SamSharp_WinFormDemo
 				return;
 			}
 			int imageSize = (int)NumericUpDown_ImageSize.Value;
-			List<PredictOutput> outputs = predictor.Predict(image, samPoints, samBoxes, imageSize);
+			List<PredictOutput> outputs = predictor.Predict(samPoints, samBoxes);
 			SKBitmap resultBmp = image.Copy();
 			using (SKCanvas canvas = new SKCanvas(resultBmp))
 			{
@@ -136,7 +142,7 @@ namespace SamSharp_WinFormDemo
 		private void MainForm_Load(object sender, EventArgs e)
 		{
 			ComboBox_Device.SelectedIndex = 1;
-			ComboBox_ScaleType.SelectedIndex = 0;
+			ComboBox_ScaleType.SelectedIndex = 1;
 		}
 
 		private Bitmap SKBitmapToBitmap(SKBitmap skBitmap)
@@ -153,7 +159,7 @@ namespace SamSharp_WinFormDemo
 		{
 			OpenFileDialog openFileDialog = new OpenFileDialog
 			{
-				Filter = ".pth|*.pth",
+				Filter = "Weight File|*.pth;*.pt",
 			};
 			if (openFileDialog.ShowDialog() == DialogResult.OK)
 			{
@@ -295,9 +301,5 @@ namespace SamSharp_WinFormDemo
 			}
 		}
 
-		private void Button_Auto_Click(object sender, EventArgs e)
-		{
-
-		}
 	}
 }

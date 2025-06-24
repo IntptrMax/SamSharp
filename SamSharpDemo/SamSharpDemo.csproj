@@ -17,7 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Assets\" />
+    <Folder Include="Assets\Weights\" />
   </ItemGroup>
 
 </Project>
